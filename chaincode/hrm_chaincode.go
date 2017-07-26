@@ -78,9 +78,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
-	"time"
+	// "strconv"
+	// "strings"
+	// "time"
 
 	"github.com/satori/go.uuid"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
