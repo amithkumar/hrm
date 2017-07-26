@@ -137,6 +137,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.initHealthRecord(stub, args)
 	} else if function == "readHealthRecord" { //read a health record
 		return t.readHealthRecord(stub, args)
+	}
 	// } else if function == "transferMarble" { //change owner of a specific marble
 	// 	return t.transferMarble(stub, args)
 	// } else if function == "transferMarblesBasedOnColor" { //transfer all marbles of a certain color
