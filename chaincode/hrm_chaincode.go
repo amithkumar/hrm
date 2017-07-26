@@ -237,7 +237,7 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 	// ==== Marble saved and indexed. Return success ====
 	fmt.Println("- end init marble")
 	jsonResp = "{\"recordId\":\"" + recordId +"\"}"
-	return shim.Success(jsonResp)
+	return shim.Success(byte[](jsonResp))
 }
 
 // ===============================================
@@ -251,7 +251,7 @@ func (t *SimpleChaincode) readHealthRecord(stub shim.ChaincodeStubInterface, arg
 		return shim.Error("Incorrect number of arguments. Expecting record id of the health record to query")
 	}
 
-	recordId, err = args[0]
+	recordId = args[0]
 	if err != nil {
 		jsonResp = "{\"Error\":\"Failed to parse " + args[0] + "\"}"
 		return shim.Error(jsonResp)
