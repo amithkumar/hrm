@@ -135,7 +135,10 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	// Handle different functions
 	if function == "initHealthRecord" { //create a new health record
 		return t.initHealthRecord(stub, args)
-	} else if function == "transferMarble" { //change owner of a specific marble
+	} else if function == "readHealthRecord" { //read a health record
+		return t.readHealthRecord(stub, args)
+	}
+	 else if function == "transferMarble" { //change owner of a specific marble
 		return t.transferMarble(stub, args)
 	} else if function == "transferMarblesBasedOnColor" { //transfer all marbles of a certain color
 		return t.transferMarblesBasedOnColor(stub, args)
@@ -234,6 +237,34 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 	// ==== Marble saved and indexed. Return success ====
 	fmt.Println("- end init marble")
 	return shim.Success(nil)
+}
+
+// ===============================================
+// readHealthRecord - read a health from chaincode state
+// ===============================================
+func (t *SimpleChaincode) readHealthRecord(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var name, jsonResp string
+	var err error
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting record id of the health record to query")
+	}
+
+	recordId, err = Parse(args[0])
+	if err != nil {
+		jsonResp = "{\"Error\":\"Failed to parse " + args[0] + "\"}"
+		return shim.Error(jsonResp)
+	}
+	valAsbytes, err := stub.GetState(recordId) //get the record from chaincode state
+	if err != nil {
+		jsonResp = "{\"Error\":\"Failed to get state for " + args[0] + "\"}"
+		return shim.Error(jsonResp)
+	} else if valAsbytes == nil {
+		jsonResp = "{\"Error\":\"Marble does not exist: " + args[0] + "\"}"
+		return shim.Error(jsonResp)
+	}
+
+	return shim.Success(valAsbytes)
 }
 
 // ============================================================
@@ -716,3 +747,4 @@ func (t *SimpleChaincode) getHistoryForMarble(stub shim.ChaincodeStubInterface, 
 
 	return shim.Success(buffer.Bytes())
 }
+
