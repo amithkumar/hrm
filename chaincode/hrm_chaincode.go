@@ -101,7 +101,7 @@ type marble struct {
 
 type healthRecord struct {
 	ObjectType string `json:"docType"` //docType is used to distinguish the various types of objects in state database
-	RecordId			UUID 	`json:"recordId"`
+	RecordId string 	`json:"recordId"`
 	PatientName string `json:"patientName"`
 	DoctorName string `json:"doctorName"`
 	// Name       string `json:"name"`    //the fieldtags are needed to keep case from bouncing around
@@ -185,7 +185,7 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 	if len(args[3]) <= 0 {
 		return shim.Error("4th argument must be a non-empty string")
 	}
-	recordId := New()
+	recordId := New().String();
 	patientName := args[0]
 	doctorName := args[1]
 	testType := args[2]
