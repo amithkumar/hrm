@@ -82,7 +82,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/satori/go.uuid"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
@@ -185,7 +185,7 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 	if len(args[3]) <= 0 {
 		return shim.Error("4th argument must be a non-empty string")
 	}
-	recordId := New().String();
+	recordId := uuid.NewV4().String();
 	patientName := args[0]
 	doctorName := args[1]
 	testType := args[2]
@@ -235,7 +235,8 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 
 	// ==== Marble saved and indexed. Return success ====
 	fmt.Println("- end init marble")
-	return shim.Success(nil)
+	jsonResp = "{\"recordId\":\"" + recordId +"\"}"
+	return shim.Success(jsonResp)
 }
 
 // ===============================================
