@@ -104,7 +104,7 @@ type healthRecord struct {
 	RecordId string 	`json:"recordId"`
 	PatientName string `json:"patientName"`
 	DoctorName string `json:"doctorName"`
-	// Name       string `json:"name"`    //the fieldtags are needed to keep case from bouncing around
+	// Name  ccv     string `json:"name"`    //the fieldtags are needed to keep case from bouncing around
 	TestType  string `json:"testType"`
 	Value       int    `json:"value"`
 	
