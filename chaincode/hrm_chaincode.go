@@ -237,7 +237,7 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 	// ==== Marble saved and indexed. Return success ====
 	fmt.Println("- end init marble")
 	jsonResp = "{\"recordId\":\"" + recordId +"\"}"
-	return shim.Success(byte[](jsonResp))
+	return shim.Success([]byte(jsonResp))
 }
 
 // ===============================================
