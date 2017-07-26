@@ -164,6 +164,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 // ============================================================
 func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var err error
+	var jsonResp string
 
 	//   0       1       2     3
 	// "asdf", "blue", "35", "bob"
@@ -243,7 +244,7 @@ func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, arg
 // readHealthRecord - read a health from chaincode state
 // ===============================================
 func (t *SimpleChaincode) readHealthRecord(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var name, jsonResp string
+	var name, jsonResp, recordId string
 	var err error
 
 	if len(args) != 1 {
