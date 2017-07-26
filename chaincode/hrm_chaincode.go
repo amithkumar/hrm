@@ -17,256 +17,213 @@ specific language governing permissions and limitations
 under the License.
 */
 
-// ====CHAINCODE EXECUTION SAMPLES (CLI) ==================
-
-// ==== Invoke marbles ====
-// peer chaincode invoke -C myc1 -n marbles -c '{"Args":["initMarble","marble1","blue","35","tom"]}'
-// peer chaincode invoke -C myc1 -n marbles -c '{"Args":["initMarble","marble2","red","50","tom"]}'
-// peer chaincode invoke -C myc1 -n marbles -c '{"Args":["initMarble","marble3","blue","70","tom"]}'
-// peer chaincode invoke -C myc1 -n marbles -c '{"Args":["transferMarble","marble2","jerry"]}'
-// peer chaincode invoke -C myc1 -n marbles -c '{"Args":["transferMarblesBasedOnColor","blue","jerry"]}'
-// peer chaincode invoke -C myc1 -n marbles -c '{"Args":["delete","marble1"]}'
-
-// ==== Query marbles ====
-// peer chaincode query -C myc1 -n marbles -c '{"Args":["readMarble","marble1"]}'
-// peer chaincode query -C myc1 -n marbles -c '{"Args":["getMarblesByRange","marble1","marble3"]}'
-// peer chaincode query -C myc1 -n marbles -c '{"Args":["getHistoryForMarble","marble1"]}'
-
-// Rich Query (Only supported if CouchDB is used as state database):
-//   peer chaincode query -C myc1 -n marbles -c '{"Args":["queryMarblesByOwner","tom"]}'
-//   peer chaincode query -C myc1 -n marbles -c '{"Args":["queryMarbles","{\"selector\":{\"owner\":\"tom\"}}"]}'
-
-//The following examples demonstrate creating indexes on CouchDB
-//Example hostname:port configurations
-//
-//Docker or vagrant environments:
-// http://couchdb:5984/
-//
-//Inside couchdb docker container
-// http://127.0.0.1:5984/
-
-// Index for chaincodeid, docType, owner.
-// Note that docType and owner fields must be prefixed with the "data" wrapper
-// chaincodeid must be added for all queries
-//
-// Definition for use with Fauxton interface
-// {"index":{"fields":["chaincodeid","data.docType","data.owner"]},"ddoc":"indexOwnerDoc", "name":"indexOwner","type":"json"}
-//
-// example curl definition for use with command line
-// curl -i -X POST -H "Content-Type: application/json" -d "{\"index\":{\"fields\":[\"chaincodeid\",\"data.docType\",\"data.owner\"]},\"name\":\"indexOwner\",\"ddoc\":\"indexOwnerDoc\",\"type\":\"json\"}" http://hostname:port/myc1/_index
-//
-
-// Index for chaincodeid, docType, owner, size (descending order).
-// Note that docType, owner and size fields must be prefixed with the "data" wrapper
-// chaincodeid must be added for all queries
-//
-// Definition for use with Fauxton interface
-// {"index":{"fields":[{"data.size":"desc"},{"chaincodeid":"desc"},{"data.docType":"desc"},{"data.owner":"desc"}]},"ddoc":"indexSizeSortDoc", "name":"indexSizeSortDesc","type":"json"}
-//
-// example curl definition for use with command line
-// curl -i -X POST -H "Content-Type: application/json" -d "{\"index\":{\"fields\":[{\"data.size\":\"desc\"},{\"chaincodeid\":\"desc\"},{\"data.docType\":\"desc\"},{\"data.owner\":\"desc\"}]},\"ddoc\":\"indexSizeSortDoc\", \"name\":\"indexSizeSortDesc\",\"type\":\"json\"}" http://hostname:port/myc1/_index
-
-// Rich Query with index design doc and index name specified (Only supported if CouchDB is used as state database):
-//   peer chaincode query -C myc1 -n marbles -c '{"Args":["queryMarbles","{\"selector\":{\"docType\":\"marble\",\"owner\":\"tom\"}, \"use_index\":[\"_design/indexOwnerDoc\", \"indexOwner\"]}"]}'
-
-// Rich Query with index design doc specified only (Only supported if CouchDB is used as state database):
-//   peer chaincode query -C myc1 -n marbles -c '{"Args":["queryMarbles","{\"selector\":{\"docType\":{\"$eq\":\"marble\"},\"owner\":{\"$eq\":\"tom\"},\"size\":{\"$gt\":0}},\"fields\":[\"docType\",\"owner\",\"size\"],\"sort\":[{\"size\":\"desc\"}],\"use_index\":\"_design/indexSizeSortDoc\"}"]}'
-
 package main
 
 import (
-	//"bytes"
-	"encoding/json"
-	"fmt"
-	// "strconv"
-	// "strings"
-	// "time"
+        "errors"
+        "fmt"
+        "strconv"
 
-	"github.com/satori/go.uuid"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
+"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
 
-type marble struct {
-	ObjectType string `json:"docType"` //docType is used to distinguish the various types of objects in state database
-	Name       string `json:"name"`    //the fieldtags are needed to keep case from bouncing around
-	Color      string `json:"color"`
-	Size       int    `json:"size"`
-	Owner      string `json:"owner"`
+func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+        fmt.Printf("Init called, initializing chaincode")
+        
+        var A, B string    // Entities
+        var Aval, Bval int // Asset holdings
+        var err error
+
+        if len(args) != 4 {
+               return nil, errors.New("Incorrect number of arguments. Expecting 4")
+        }
+
+        // Initialize the chaincode
+        A = args[0]
+        Aval, err = strconv.Atoi(args[1])
+        if err != nil {
+               return nil, errors.New("Expecting integer value for asset holding")
+        }
+        B = args[2]
+        Bval, err = strconv.Atoi(args[3])
+        if err != nil {
+               return nil, errors.New("Expecting integer value for asset holding")
+        }
+        fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
+
+        // Write the state to the ledger
+        err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+        if err != nil {
+               return nil, err
+        }
+
+        err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
+        if err != nil {
+               return nil, err
+        }
+
+        return nil, nil
 }
 
-type healthRecord struct {
-	ObjectType string `json:"docType"` //docType is used to distinguish the various types of objects in state database
-	RecordId string 	`json:"recordId"`
-	PatientName string `json:"patientName"`
-	DoctorName string `json:"doctorName"`
-	// Name  ccv     string `json:"name"`    //the fieldtags are needed to keep case from bouncing around
-	TestType  string `json:"testType"`
-	Value       string    `json:"value"`
-	
+// Transaction makes payment of X units from A to B
+func (t *SimpleChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+        fmt.Printf("Running invoke")
+        
+        var A, B string    // Entities
+        var Aval, Bval int // Asset holdings
+        var X int          // Transaction value
+        var err error
+
+        if len(args) != 3 {
+               return nil, errors.New("Incorrect number of arguments. Expecting 3")
+        }
+
+        A = args[0]
+        B = args[1]
+
+        // Get the state from the ledger
+        // TODO: will be nice to have a GetAllState call to ledger
+        Avalbytes, err := stub.GetState(A)
+        if err != nil {
+               return nil, errors.New("Failed to get state")
+        }
+        if Avalbytes == nil {
+               return nil, errors.New("Entity not found")
+        }
+        Aval, _ = strconv.Atoi(string(Avalbytes))
+
+        Bvalbytes, err := stub.GetState(B)
+        if err != nil {
+               return nil, errors.New("Failed to get state")
+        }
+        if Bvalbytes == nil {
+               return nil, errors.New("Entity not found")
+        }
+        Bval, _ = strconv.Atoi(string(Bvalbytes))
+
+        // Perform the execution
+        X, err = strconv.Atoi(args[2])
+        Aval = Aval - X
+        Bval = Bval + X
+        fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
+
+        // Write the state back to the ledger
+        err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+        if err != nil {
+               return nil, err
+        }
+
+        err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
+        if err != nil {
+               return nil, err
+        }
+
+        return nil, nil
 }
 
-// ===================================================================================
-// Main
-// ===================================================================================
+// Deletes an entity from state
+func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+        fmt.Printf("Running delete")
+        
+        if len(args) != 1 {
+               return nil, errors.New("Incorrect number of arguments. Expecting 3")
+        }
+
+        A := args[0]
+
+        // Delete the key from the state in ledger
+        err := stub.DelState(A)
+        if err != nil {
+               return nil, errors.New("Failed to delete state")
+        }
+
+        return nil, nil
+}
+
+// Invoke callback representing the invocation of a chaincode
+// This chaincode will manage two accounts A and B and will transfer X units from A to B upon invoke
+func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+        fmt.Printf("Invoke called, determining function")
+        
+        // Handle different functions
+        if function == "invoke" {
+               // Transaction makes payment of X units from A to B
+               fmt.Printf("Function is invoke")
+               return t.invoke(stub, args)
+        } else if function == "init" {
+               fmt.Printf("Function is init")
+               return t.Init(stub, function, args)
+        } else if function == "delete" {
+               // Deletes an entity from its state
+               fmt.Printf("Function is delete")
+               return t.delete(stub, args)
+        }
+
+        return nil, errors.New("Received unknown function invocation")
+}
+
+func (t* SimpleChaincode) Run(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+        fmt.Printf("Run called, passing through to Invoke (same function)")
+        
+        // Handle different functions
+        if function == "invoke" {
+               // Transaction makes payment of X units from A to B
+               fmt.Printf("Function is invoke")
+               return t.invoke(stub, args)
+        } else if function == "init" {
+               fmt.Printf("Function is init")
+               return t.Init(stub, function, args)
+        } else if function == "delete" {
+               // Deletes an entity from its state
+               fmt.Printf("Function is delete")
+               return t.delete(stub, args)
+        }
+
+        return nil, errors.New("Received unknown function invocation")
+}
+
+// Query callback representing the query of a chaincode
+func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+        fmt.Printf("Query called, determining function")
+        
+        if function != "query" {
+               fmt.Printf("Function is query")
+               return nil, errors.New("Invalid query function name. Expecting \"query\"")
+        }
+        var A string // Entities
+        var err error
+
+        if len(args) != 1 {
+               return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
+        }
+
+        A = args[0]
+
+        // Get the state from the ledger
+        Avalbytes, err := stub.GetState(A)
+        if err != nil {
+               jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
+               return nil, errors.New(jsonResp)
+        }
+
+        if Avalbytes == nil {
+               jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
+               return nil, errors.New(jsonResp)
+        }
+
+        jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
+        fmt.Printf("Query Response:%s\n", jsonResp)
+        return Avalbytes, nil
+}
+
 func main() {
-	err := shim.Start(new(SimpleChaincode))
-	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
-	}
+        err := shim.Start(new(SimpleChaincode))
+        if err != nil {
+               fmt.Printf("Error starting Simple chaincode: %s", err)
+        }
 }
-
-// Init initializes chaincode
-// ===========================
-func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	return shim.Success(nil)
-}
-
-// Invoke - Our entry point for Invocations
-// ========================================
-func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
-	function, args := stub.GetFunctionAndParameters()
-	fmt.Println("amith invoked is running " + function)
-
-	// Handle different functions
-	if function == "initHealthRecord" { //create a new health record
-		return t.initHealthRecord(stub, args)
-	} else if function == "readHealthRecord" { //read a health record
-		return t.readHealthRecord(stub, args)
-	}
-	// } else if function == "transferMarble" { //change owner of a specific marble
-	// 	return t.transferMarble(stub, args)
-	// } else if function == "transferMarblesBasedOnColor" { //transfer all marbles of a certain color
-	// 	return t.transferMarblesBasedOnColor(stub, args)
-	// } else if function == "delete" { //delete a marble
-	// 	return t.delete(stub, args)
-	// } else if function == "readMarble" { //read a marble
-	// 	return t.readMarble(stub, args)
-	// } else if function == "queryMarblesByOwner" { //find marbles for owner X using rich query
-	// 	return t.queryMarblesByOwner(stub, args)
-	// } else if function == "queryMarbles" { //find marbles based on an ad hoc rich query
-	// 	return t.queryMarbles(stub, args)
-	// } else if function == "getHistoryForMarble" { //get history of values for a marble
-	// 	return t.getHistoryForMarble(stub, args)
-	// } else if function == "getMarblesByRange" { //get marbles based on range query
-	// 	return t.getMarblesByRange(stub, args)
-	// }
-
-	fmt.Println("amith invoke did not find func: " + function) //error
-	return shim.Error("Received unknown function invocation")
-}
-
-// ============================================================
-// initHealthRecord - create a new health record, store into chaincode state
-// ============================================================
-func (t *SimpleChaincode) initHealthRecord(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var err error
-	var jsonResp string
-
-	//   0       1       2     3
-	// "asdf", "blue", "35", "bob"
-	if len(args) != 4 {
-		return shim.Error("Incorrect number of arguments. Expecting 4")
-	}
-
-	// ==== Input sanitation ====
-	fmt.Println("- start init health record")
-	if len(args[0]) <= 0 {
-		return shim.Error("1st argument must be a non-empty string")
-	}
-	if len(args[1]) <= 0 {
-		return shim.Error("2nd argument must be a non-empty string")
-	}
-	if len(args[2]) <= 0 {
-		return shim.Error("3rd argument must be a non-empty string")
-	}
-	if len(args[3]) <= 0 {
-		return shim.Error("4th argument must be a non-empty string")
-	}
-	recordId := uuid.NewV4().String();
-	patientName := args[0]
-	doctorName := args[1]
-	testType := args[2]
-	value := args[3]
-
-	// ==== Check if marble already exists ====
-	// recordAsBytes, err := stub.GetState(recordId)
-	// if err != nil {
-	// 	return shim.Error("Failed to get marble: " + err.Error())
-	// } else if marbleAsBytes != nil {
-	// 	fmt.Println("This marble already exists: " + marbleName)
-	// 	return shim.Error("This marble already exists: " + marbleName)
-	// }
-
-	// ==== Create marble object and marshal to JSON ====
-	objectType := "healthRecord"
-	record := &healthRecord{objectType, recordId, patientName, doctorName, testType, value}
-	recordJSONasBytes, err := json.Marshal(record)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	//Alternatively, build the marble json string manually if you don't want to use struct marshalling
-	//marbleJSONasString := `{"docType":"Marble",  "name": "` + marbleName + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "owner": "` + owner + `"}`
-	//marbleJSONasBytes := []byte(str)
-
-	// === Save marble to state ===
-	err = stub.PutState(recordId, recordJSONasBytes)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-/*
-	//  ==== Index the marble to enable color-based range queries, e.g. return all blue marbles ====
-	//  An 'index' is a normal key/value entry in state.
-	//  The key is a composite key, with the elements that you want to range query on listed first.
-	//  In our case, the composite key is based on indexName~color~name.
-	//  This will enable very efficient state range queries based on composite keys matching indexName~color~*
-	indexName := "color~name"
-	colorNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{marble.Color, marble.Name})
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	//  Save index entry to state. Only the key name is needed, no need to store a duplicate copy of the marble.
-	//  Note - passing a 'nil' value will effectively delete the key from state, therefore we pass null character as value
-	value := []byte{0x00}
-	stub.PutState(colorNameIndexKey, value)
-	*/
-
-	// ==== Marble saved and indexed. Return success ====
-	fmt.Println("- end init marble")
-	jsonResp = "{\"recordId\":\"" + recordId +"\"}"
-	return shim.Success([]byte(jsonResp))
-}
-
-// ===============================================
-// readHealthRecord - read a health from chaincode state
-// ===============================================
-func (t *SimpleChaincode) readHealthRecord(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var jsonResp, recordId string
-	var err error
-
-	if len(args) != 1 {
-		return shim.Error("Incorrect number of arguments. Expecting record id of the health record to query")
-	}
-
-	recordId = args[0]
-	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to parse " + args[0] + "\"}"
-		return shim.Error(jsonResp)
-	}
-	valAsbytes, err := stub.GetState(recordId) //get the record from chaincode state
-	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + args[0] + "\"}"
-		return shim.Error(jsonResp)
-	} else if valAsbytes == nil {
-		jsonResp = "{\"Error\":\"Marble does not exist: " + args[0] + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	return shim.Success(valAsbytes)
-}
-
 
