@@ -106,7 +106,7 @@ type healthRecord struct {
 	DoctorName string `json:"doctorName"`
 	// Name  ccv     string `json:"name"`    //the fieldtags are needed to keep case from bouncing around
 	TestType  string `json:"testType"`
-	Value       int    `json:"value"`
+	Value       string    `json:"value"`
 	
 }
 
@@ -249,7 +249,7 @@ func (t *SimpleChaincode) readHealthRecord(stub shim.ChaincodeStubInterface, arg
 		return shim.Error("Incorrect number of arguments. Expecting record id of the health record to query")
 	}
 
-	recordId, err = Parse(args[0])
+	recordId, err = args[0]
 	if err != nil {
 		jsonResp = "{\"Error\":\"Failed to parse " + args[0] + "\"}"
 		return shim.Error(jsonResp)
