@@ -368,8 +368,8 @@ func (t *SimpleChaincode) add_patient(stub shim.ChaincodeStubInterface, args []s
 		return nil, errors.New("This patient arleady exists")				//all stop a marble by this name exists
 	}
 	
-	recordAsBytes, _ := json.Marshal(res)
-	err = stub.PutState(name, recordAsBytes)								//rewrite the marble with id as key
+	recordAsBytes1, _ := json.Marshal(res)
+	err = stub.PutState(name, recordAsBytes1)								//rewrite the marble with id as key
 	if err != nil {
 		return nil, err
 	}
