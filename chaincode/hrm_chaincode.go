@@ -368,6 +368,7 @@ func (t *SimpleChaincode) add_patient(stub shim.ChaincodeStubInterface, args []s
 		return nil, errors.New("This patient arleady exists")				//all stop a marble by this name exists
 	}
 	
+	res.Name = name
 	recordAsBytes1, _ := json.Marshal(res)
 	err = stub.PutState(name, recordAsBytes1)								//rewrite the marble with id as key
 	if err != nil {
@@ -385,7 +386,7 @@ func (t *SimpleChaincode) add_patient(stub shim.ChaincodeStubInterface, args []s
 // ============================================================================================================================
 func (t *SimpleChaincode) add_record(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	var err error
-	
+
 	fmt.Println("- start init health record")
 	if len(args[0]) <= 0 {
 		return nil, errors.New("1st argument must be a non-empty string")
