@@ -44,6 +44,14 @@ type Marble struct{
 	User string `json:"user"`
 }
 
+type Healthrecord struct{
+	PName string `json:"pname"`					//the fieldtags are needed to keep case from bouncing around
+	DName string `json:"dname"`					//the fieldtags are needed to keep case from bouncing around
+	TestType string `json:"color"`
+	Size int `json:"size"`
+	User string `json:"user"`
+}
+
 type Description struct{
 	Color string `json:"color"`
 	Size int `json:"size"`
