@@ -385,8 +385,6 @@ func (t *SimpleChaincode) add_patient(stub shim.ChaincodeStubInterface, args []s
 // ============================================================================================================================
 func (t *SimpleChaincode) add_record(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	var err error
-	var will_size int
-	var trade_away Description
 	
 	fmt.Println("- start init health record")
 	if len(args[0]) <= 0 {
