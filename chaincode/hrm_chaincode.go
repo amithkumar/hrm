@@ -446,7 +446,7 @@ func (t *SimpleChaincode) add_record(stub shim.ChaincodeStubInterface, args []st
 	patient.Records = append(patient.Records, open);						//append to open trades
 	fmt.Println("! appended open to records")
 	jsonAsBytes, _ = json.Marshal(patient)
-	err = stub.PutState(openTradesStr, jsonAsBytes)								//rewrite open orders
+	err = stub.PutState(name, jsonAsBytes)								//rewrite open orders
 	if err != nil {
 		return nil, err
 	}
