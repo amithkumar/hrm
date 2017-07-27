@@ -44,12 +44,17 @@ type Marble struct{
 	User string `json:"user"`
 }
 
-type Healthrecord struct{
-	PName string `json:"pname"`					//the fieldtags are needed to keep case from bouncing around
-	DName string `json:"dname"`					//the fieldtags are needed to keep case from bouncing around
-	TestType string `json:"color"`
-	Size int `json:"size"`
-	User string `json:"user"`
+type HealthRecord struct{
+	//PName string `json:"pname"`					//the fieldtags are needed to keep case from bouncing around
+	Doctor string `json:"doctor"`					//the fieldtags are needed to keep case from bouncing around	
+	TestType string `json:"testType"`
+	Value string `json:"value"`
+	TestDate string `json:"testDate`
+}
+
+type Patient struct{
+	Name string `json:"name"`
+	Records []HealthRecord `json:"records"`
 }
 
 type Description struct{
@@ -143,6 +148,10 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.Write(stub, args)
 	} else if function == "init_marble" {									//create a new marble
 		return t.init_marble(stub, args)
+	} else if function == "add_patient" {									//create a new patient
+		return t.add_patient(stub, args)
+	} else if function == "add_record" {									//create a new health record
+		return t.add_record(stub, args)
 	} else if function == "set_user" {										//change owner of a marble
 		res, err := t.set_user(stub, args)
 		cleanTrades(stub)													//lets make sure all open trades are still valid
@@ -326,6 +335,123 @@ func (t *SimpleChaincode) init_marble(stub shim.ChaincodeStubInterface, args []s
 	err = stub.PutState(marbleIndexStr, jsonAsBytes)						//store name of marble
 
 	fmt.Println("- end init marble")
+	return nil, nil
+}
+
+// ============================================================================================================================
+// Init Marble - create a new health record, store into chaincode state
+// ============================================================================================================================
+func (t *SimpleChaincode) add_patient(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	var err error
+
+	//   0       1       2     3
+	// "asdf", "blue", "35", "bob"
+	if len(args) < 1 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 1")
+	}
+
+	//input sanitation
+	fmt.Println("- start init patient record")
+	
+	name := args[0]
+
+	//check if patient already exists
+	recordAsBytes, err := stub.GetState(name)
+	if err != nil {
+		return nil, errors.New("Failed to get patient name")
+	}
+	res := Patient{}
+	json.Unmarshal(recordAsBytes, &res)
+	if res.Name == name{
+		fmt.Println("This patient arleady exists: " + name)
+		fmt.Println(res);
+		return nil, errors.New("This patient arleady exists")				//all stop a marble by this name exists
+	}
+	
+	recordAsBytes, _ := json.Marshal(res)
+	err = stub.PutState(name, recordAsBytes)								//rewrite the marble with id as key
+	if err != nil {
+		return nil, err
+	}
+	
+	fmt.Println("- end set user")
+	return nil, nil
+	
+}
+
+
+// ============================================================================================================================
+// Open Trade - create an open trade for a marble you want with marbles you have 
+// ============================================================================================================================
+func (t *SimpleChaincode) add_record(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	var err error
+	var will_size int
+	var trade_away Description
+	
+	fmt.Println("- start init health record")
+	if len(args[0]) <= 0 {
+		return nil, errors.New("1st argument must be a non-empty string")
+	}
+	if len(args[1]) <= 0 {
+		return nil, errors.New("2nd argument must be a non-empty string")
+	}
+	if len(args[2]) <= 0 {
+		return nil, errors.New("3rd argument must be a non-empty string")
+	}
+	if len(args[3]) <= 0 {
+		return nil, errors.New("4th argument must be a non-empty string")
+	}
+
+	if len(args[4]) <= 0 {
+		return nil, errors.New("4th argument must be a non-empty string")
+	}
+
+	open := HealthRecord{}
+	name := args[0]
+	open.Doctor = args[1]
+	open.TestType = args[2]											//use timestamp as an ID
+	open.Value = args[3]
+	open.TestDate =  args[4]
+	fmt.Println("- start health recrod")
+	jsonAsBytes, _ := json.Marshal(open)
+	err = stub.PutState("_debug1", jsonAsBytes)
+
+	// for i:=3; i < len(args); i++ {												//create and append each willing trade
+	// 	will_size, err = strconv.Atoi(args[i + 1])
+	// 	if err != nil {
+	// 		msg := "is not a numeric string " + args[i + 1]
+	// 		fmt.Println(msg)
+	// 		return nil, errors.New(msg)
+	// 	}
+		
+	// 	trade_away = Description{}
+	// 	trade_away.Color = args[i]
+	// 	trade_away.Size =  will_size
+	// 	fmt.Println("! created trade_away: " + args[i])
+	// 	jsonAsBytes, _ = json.Marshal(trade_away)
+	// 	err = stub.PutState("_debug2", jsonAsBytes)
+		
+	// 	open.Willing = append(open.Willing, trade_away)
+	// 	fmt.Println("! appended willing to open")
+	// 	i++;
+	// }
+	
+	//get the open trade struct
+	patientAsBytes, err := stub.GetState(name)
+	if err != nil {
+		return nil, errors.New("Failed to get patirnt")
+	}
+	var patient Patient
+	json.Unmarshal(patientAsBytes, &patient)										//un stringify it aka JSON.parse()
+	
+	patient.Records = append(patient.Records, open);						//append to open trades
+	fmt.Println("! appended open to records")
+	jsonAsBytes, _ = json.Marshal(patient)
+	err = stub.PutState(openTradesStr, jsonAsBytes)								//rewrite open orders
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("- end add record")
 	return nil, nil
 }
 
